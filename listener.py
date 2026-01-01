@@ -30,7 +30,41 @@ def get_mt5_common_path():
             if os.path.exists(p): return p
         return "."
     elif system == "Linux":
-        return os.path.join(home, ".wine/drive_c/users/root/AppData/Roaming/MetaQuotes/Terminal/Common/Files")
+        # Auto-detect: Search for MetaQuotes directories in multiple Wine prefixes
+        # MT5 can be installed in ~/.wine, ~/.mt5, or other custom prefixes
+        possible_prefixes = [
+            os.path.join(home, ".mt5"),      # Common MT5-specific prefix
+            os.path.join(home, ".wine"),     # Default Wine prefix
+        ]
+        # Also check for any .wine* folders
+        for item in os.listdir(home):
+            if item.startswith(".wine") and os.path.isdir(os.path.join(home, item)):
+                possible_prefixes.append(os.path.join(home, item))
+        
+        current_user = os.path.basename(home)
+        
+        for wine_prefix in possible_prefixes:
+            users_dir = os.path.join(wine_prefix, "drive_c", "users")
+            if not os.path.exists(users_dir):
+                continue
+                
+            # Search through all Wine users for MetaQuotes folder
+            for username in os.listdir(users_dir):
+                # Skip system folders
+                if username.lower() in ('public', 'default'):
+                    continue
+                candidate = os.path.join(users_dir, username, "AppData", "Roaming", 
+                                         "MetaQuotes", "Terminal", "Common", "Files")
+                if os.path.exists(os.path.dirname(candidate)):  # Check if Common folder exists
+                    os.makedirs(candidate, exist_ok=True)
+                    print(f" [Info] Found MT5 Common Files at: {candidate}")
+                    return candidate
+        
+        # Fallback
+        fallback = os.path.join(home, ".mt5/drive_c/users", current_user, 
+                                "AppData/Roaming/MetaQuotes/Terminal/Common/Files")
+        os.makedirs(fallback, exist_ok=True)
+        return fallback
     return "."
 
 MT5_COMMON_PATH = get_mt5_common_path()

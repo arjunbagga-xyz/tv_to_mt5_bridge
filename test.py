@@ -3,7 +3,7 @@ import json
 import time
 
 # CONFIG
-URL = "http://localhost:80/webhook" # Or port 5000
+URL = "http://localhost:5000/webhook" # Or port 5000
 HEADERS = {'Content-Type': 'application/json'}
 
 def send_alert(data, description):
