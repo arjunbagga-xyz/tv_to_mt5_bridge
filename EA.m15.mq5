@@ -24,6 +24,8 @@ input int            InpSlippage         = 5;          // Max Slippage
 input group "Risk Management"
 input ENUM_SIZE_MODE InpSizeMode         = SIZE_MODE_MARGIN_PCT; 
 input bool           InpForceMinLot      = true;       // Avoid Lot Size 0 errors
+input double         InpAutoSLPct        = 0.0;        // Auto SL % from Entry (0=Off)
+input double         InpAutoTPPct        = 0.0;        // Auto TP % from Entry (0=Off)
 
 input group "System"
 input bool           InpDebugMode        = true;       
@@ -116,8 +118,21 @@ void ProcessSignalFile(string filename)
    
    string comment = (signal_id == "") ? "TV_Silo" : signal_id;
 
-   if(cmd == "buy") trade.Buy(lots, Symbol(), 0, sl, tp, comment);
-   else if(cmd == "sell") trade.Sell(lots, Symbol(), 0, sl, tp, comment);
+   // Auto SL/TP: If signal has no SL/TP but EA inputs are set, calculate from entry price
+   if(cmd == "buy")
+     {
+      double ask = SymbolInfoDouble(Symbol(), SYMBOL_ASK);
+      if(sl <= 0 && InpAutoSLPct > 0) sl = NormalizeDouble(ask * (1.0 - InpAutoSLPct / 100.0), (int)SymbolInfoInteger(Symbol(), SYMBOL_DIGITS));
+      if(tp <= 0 && InpAutoTPPct > 0) tp = NormalizeDouble(ask * (1.0 + InpAutoTPPct / 100.0), (int)SymbolInfoInteger(Symbol(), SYMBOL_DIGITS));
+      trade.Buy(lots, Symbol(), 0, sl, tp, comment);
+     }
+   else if(cmd == "sell")
+     {
+      double bid = SymbolInfoDouble(Symbol(), SYMBOL_BID);
+      if(sl <= 0 && InpAutoSLPct > 0) sl = NormalizeDouble(bid * (1.0 + InpAutoSLPct / 100.0), (int)SymbolInfoInteger(Symbol(), SYMBOL_DIGITS));
+      if(tp <= 0 && InpAutoTPPct > 0) tp = NormalizeDouble(bid * (1.0 - InpAutoTPPct / 100.0), (int)SymbolInfoInteger(Symbol(), SYMBOL_DIGITS));
+      trade.Sell(lots, Symbol(), 0, sl, tp, comment);
+     }
   }
 
 double CalculateLotSize(string symbol, double size_val, double sl_price)
